@@ -1784,7 +1784,7 @@ def process_block_geometry(doc, block_layout, insert_point, rotation_angle,
                 pass
         
         # Parsează parametrii entității din bloc (doar proprietăți geometrice)
-        def parse_entity_xdata(xdata_list, global_z):
+        def parse_entity_xdata(xdata_list, global_z, block_z_offset=0.0):
             height = 1.0  # Înălțimea extrudării
             name_str = ""  # Numele elementului
             solid_flag = 1  # Solid/void flag
@@ -1826,12 +1826,14 @@ def process_block_geometry(doc, block_layout, insert_point, rotation_angle,
                     elif sval.startswith("Opening_area:"):
                         opening_area_formula = sval.split(":", 1)[1].strip()
             
-            # Calculează Z final pentru entitatea din bloc
-            z_final = global_z + z_relative
+            # Calculează Z final pentru entitatea din bloc: global_z + block_z_offset + z_relative_entity
+            z_final = global_z + block_z_offset + z_relative
+            if abs(block_z_offset) > 1e-6 or abs(z_relative) > 1e-6:
+                print(f"[DEBUG] Entity Z calculation: global_z={global_z:.3f} + block_z_offset={block_z_offset:.3f} + z_relative_entity={z_relative:.3f} = z_final={z_final:.3f}")
             return height, z_final, z_relative, name_str, solid_flag, angle, rotate90, opening_area_formula
         
         height, z_final_entity, z_relative_entity, name_str, solid_flag, angle, rotate90, opening_area_formula = parse_entity_xdata(
-            entity_xdata.get("QCAD", []), global_z
+            entity_xdata.get("QCAD", []), global_z, z_relative
         )
         
         # Rotațiile finale sunt doar cele globale de pe bloc (nu mai adunăm cu elementele)
@@ -2011,7 +2013,7 @@ def process_block_geometry(doc, block_layout, insert_point, rotation_angle,
 
                     final_position = [insert_point.x, insert_point.y, z_position]
                     mesh.apply_translation(final_position)
-                    print(f"[DEBUG] Applied final translation to: {final_position}")
+                    print(f"[DEBUG] Applied final translation to: {final_position} (from z_final_entity={z_final_entity:.3f})")
         
         # Adaugă mesh-ul la lista corespunzătoare și mapping
         if mesh is not None:
