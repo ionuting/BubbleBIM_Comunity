@@ -1,0 +1,98 @@
+{
+  "IfcSpace": {
+	"color": [0.0, 0.3, 1.0],
+	"alpha": 0.8
+  },
+  "default": {
+	"color": [0.5, 1.0, 0.0],
+	"alpha": 1.0
+  },
+	"glass": {
+	"color": [0.7, 0.9, 1.0],
+	"alpha": 0.3
+  },
+   "IfcWall": {
+	"color": [0.7, 0.133, 0.133],
+	"alpha": 1.0,
+	"material_layers": [
+	  {
+		"name": "Brick",
+		"material": "GVP25",
+		"category": "brick",
+		"thickness": 0.25,
+		"color": [0.7, 0.133, 0.133],
+		"alpha": 1.0
+	  }
+	]
+  },
+	"IfcCovering": {
+	"color": [0.7, 0.7, 0.7],
+	"alpha": 1.0
+  },
+  "IfcColumn": {
+	"color": [0.2, 0.2, 0.2],
+	"alpha": 1.0,
+	"material_layers": [
+	  {
+		"name": "Concrete_Core",
+		"material": "C25",
+		"category": "concrete",
+		"thickness": 0.25,
+		"color": [0.3, 0.3, 0.3],
+		"alpha": 1.0
+	  }
+	]
+  },
+  "IfcBeam": {
+	"color": [0.300, 0.300, 0.300],
+	"alpha": 1.0,
+	"material_layers": [
+	  {
+		"name": "Concrete_Beam",
+		"material": "C30",
+		"category": "concrete",
+		"thickness": 0.25,
+		"color": [0.35, 0.35, 0.35],
+		"alpha": 1.0
+	  }
+	]
+  },
+  "IfcSlab": {
+	"color": [0.300, 0.300, 0.300],
+	"alpha": 1.0,
+	"material_layers": [
+	  {
+		"name": "Concrete_Slab",
+		"material": "C25",
+		"category": "concrete",
+		"thickness": 0.15,
+		"color": [0.3, 0.3, 0.3],
+		"alpha": 1.0
+	  }
+	]
+  },
+	"IfcRoof": {
+	"color": [0.65, 0.17, 0.16],
+	"alpha": 1.0
+  },
+  "void": {
+	"color": [0.0, 0.0, 0.0],
+	"alpha": 0.1
+  },
+	"wood": {
+	"color": [0.65, 0.17, 0.16],
+	"alpha": 1.0
+  },
+  	"window": {
+	"color": [0.65, 0.17, 0.16],
+	"alpha": 1.0
+  },
+  "IfcProxy": {
+	"color": [0.1, 0.5, 0.5],
+	"alpha": 1.0
+  },
+  "section": {
+	"color": [0.7, 0.7, 0.7],
+	"alpha": 0.3
+  }
+}

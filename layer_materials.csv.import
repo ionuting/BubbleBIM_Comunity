@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://eexjcxhu28ww"
+
+[deps]
+
+files=["res://layer_materials.color.translation", "res://layer_materials.alpha.translation"]
+
+source_file="res://layer_materials.csv"
+dest_files=["res://layer_materials.color.translation", "res://layer_materials.alpha.translation"]
+
+[params]
+
+compress=true
+delimiter=0

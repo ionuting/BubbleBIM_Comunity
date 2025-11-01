@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3 uid="uid://cjr4c04vvg8uo"]
+
+[ext_resource type="Script" uid="uid://bonc0rhs28cyy" path="res://export_glb_button.gd" id="1_m71ua"]
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_m71ua")
+
+[node name="ExportButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 41.0
+offset_right = 104.0
+offset_bottom = 72.0
+text = "export glb"
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 27.0
+offset_top = 88.0
+offset_right = 75.0
+offset_bottom = 111.0
+text = "status"
+
+[node name="ExportIFC" type="Button" parent="."]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 6.0
+offset_right = 100.0
+offset_bottom = 37.0
+text = "export ifc"

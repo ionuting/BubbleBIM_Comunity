@@ -1,0 +1,80 @@
+[gd_scene load_steps=3 format=3 uid="uid://c7d1j7ik5r8cj"]
+
+[ext_resource type="Script" uid="uid://dkqp8q2165vr3" path="res://cad_viewer_3d.gd" id="1_n7kv7"]
+[ext_resource type="Script" uid="uid://byj7qpcba3arl" path="res://CutShaderIntegration3D.gd" id="2_cutshader"]
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_n7kv7")
+grid_color = Color(0.0104254, 0.052579, 0.0561186, 0.3)
+background_color = Color(0.925353, 0.925353, 0.925353, 1)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="LoadDxfBtn" type="Button" parent="CanvasLayer"]
+offset_right = 169.0
+offset_bottom = 31.0
+text = "Selecteaza folder dxf"
+
+[node name="ReloadBtn" type="Button" parent="CanvasLayer"]
+offset_left = 185.0
+offset_top = 2.0
+offset_right = 280.0
+offset_bottom = 33.0
+text = "Reload"
+
+[node name="ExportIfcBtn" type="Button" parent="CanvasLayer"]
+offset_left = 295.0
+offset_top = 2.0
+offset_right = 420.0
+offset_bottom = 33.0
+text = "Export IFC Spaces"
+
+[node name="ExportMultiIfcBtn" type="Button" parent="CanvasLayer"]
+offset_left = 425.0
+offset_top = 2.0
+offset_right = 580.0
+offset_bottom = 33.0
+text = "Export Multi-Level IFC"
+
+[node name="Panel" type="Panel" parent="CanvasLayer"]
+anchors_preset = -1
+anchor_left = 0.902
+anchor_right = 1.0
+anchor_bottom = 0.091
+offset_left = -0.560059
+offset_top = 17.0
+offset_right = -20.0
+offset_bottom = -34.52
+
+[node name="DxfFolderDialog" type="FileDialog" parent="CanvasLayer"]
+title = "Open a Directory"
+visible = true
+ok_button_text = "Select Current Folder"
+file_mode = 2
+access = 2
+
+[node name="Objects" type="Tree" parent="."]
+anchors_preset = -1
+anchor_right = 0.118
+anchor_bottom = 0.991
+offset_left = 2.0
+offset_top = 82.0
+offset_right = 78.44
+offset_bottom = -27.28
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
+visible = false
+
+[node name="CSGSolids" type="CSGPolygon3D" parent="CSGCombiner3D"]
+
+[node name="CSGCuts" type="CSGPolygon3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0473224, 0.0119603, 0.0422792)
+operation = 2
+polygon = PackedVector2Array(0.297929, 0.350342, 0.367905, 0.855321, 0.696905, 0.819372, 0.799614, 0.468469)
+
+[node name="CutShaderIntegration" type="Node3D" parent="."]
+script = ExtResource("2_cutshader")
