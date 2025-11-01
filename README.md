@@ -14,7 +14,7 @@ A Godot-based CAD viewer for converting and visualizing DXF files in 3D with IFC
 
 ## Requirements
 
-- **Godot 4.x** (recommended 4.1+)
+- **Godot 4.4.1+** (recommended 4.4.1)
 - **Python 3.8+** with packages:
   - `ezdxf` - DXF file parsing
   - `trimesh` - 3D mesh processing
@@ -25,10 +25,7 @@ A Godot-based CAD viewer for converting and visualizing DXF files in 3D with IFC
 ## Quick Start
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/BubbleBIM.git
-   cd BubbleBIM
-   ```
+    Download or clone the BubbleBIM repository to your local machine.
 
 2. **Install Python dependencies**
    ```bash
@@ -84,7 +81,9 @@ BubbleBIM/
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later)** - see the [LICENSE](LICENSE) file for details.
+
+**Important**: Due to the dependency on **IfcOpenShell** (LGPL-3.0), this project must be licensed under LGPL-3.0 to maintain license compatibility. While other dependencies use more permissive licenses (MIT, BSD, Apache 2.0), the most restrictive license (LGPL) governs the combined work.
 
 ## Acknowledgments
 
