@@ -1,0 +1,18 @@
+[
+  {
+    "id": "column_40_40_300",
+    "type": "column",
+    "center": [5.0, 2.0],
+    "width": 0.4,
+    "length": 0.4,
+    "height": 3.0
+  },
+  {
+    "id": "col2",
+    "type": "column",
+    "center": [8.0, 2.0],
+    "width": 0.5,
+    "length": 0.5,
+    "height": 2.5
+  }
+]

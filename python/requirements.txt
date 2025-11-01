@@ -1,0 +1,26 @@
+# Core DXF processing
+ezdxf>=1.0.0
+
+# 3D mesh processing and export
+trimesh[easy]>=3.15.0
+numpy>=1.20.0
+
+# Geometry processing
+shapely>=2.0.0
+mapbox_earcut>=1.0.0
+
+# Optional advanced processing
+manifold3d
+
+# File monitoring (for watchdog functionality)
+watchdog>=3.0.0
+
+# IFC processing (optional)
+ifcopenshell>=0.7.0
+
+# Additional mesh processing
+scipy
+networkx
+
+# Performance optimizations
+numba

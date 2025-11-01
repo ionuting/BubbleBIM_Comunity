@@ -1,0 +1,18 @@
+[
+  {
+    "id": "wall1",
+    "type": "wall",
+    "start": [0.0, 0.0],
+    "end": [4.0, 0.0],
+    "thickness": 0.2,
+    "height": 2.8
+  },
+  {
+    "id": "wall2",
+    "type": "wall",
+    "start": [4.0, 0.0],
+    "end": [4.0, 3.0],
+    "thickness": 0.2,
+    "height": 2.8
+  }
+]
