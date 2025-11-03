@@ -107,9 +107,10 @@ class IfcGlbConverter:
     def _load_layer_materials_config(self) -> Dict[str, Any]:
         """Încarcă configurația materialelor din layer_materials.json"""
         try:
+            import json as json_module  # Import local pentru a evita conflicte
             config_path = Path(__file__).parent.parent / "layer_materials.json"
             with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                return json_module.load(f)
         except Exception as e:
             print(f"[WARNING] Failed to load layer materials config: {e}")
             return {}
@@ -298,8 +299,9 @@ class IfcGlbConverter:
     def _load_json_mapping(self, json_path: str) -> List[Dict[str, Any]]:
         """Încarcă metadata din JSON mapping"""
         try:
+            import json as json_module  # Import local pentru a evita conflicte
             with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+                data = json_module.load(f)
             
             # JSON mapping este o listă de dicționare cu UUID-uri și metadata
             if isinstance(data, list):
@@ -356,12 +358,15 @@ class IfcGlbConverter:
         ifcopenshell.api.run("aggregate.assign_object", self.model, 
                            products=[self.storey], relating_object=self.building)
     
-    def _convert_mesh_to_ifc(self, mesh_data: Dict[str, Any], metadata: Dict[str, Any]) -> bool:
+    def _convert_mesh_to_ifc(self, mesh_data: Dict[str, Any], metadata: Dict[str, Any], storey=None) -> bool:
         """Convertește un mesh cu metadata în element IFC"""
         try:
             mesh_name = mesh_data['name']
             mesh_uuid = mesh_data['uuid']
             geometry = mesh_data['geometry']
+            
+            # Folosește storey-ul furnizat sau cel implicit
+            target_storey = storey if storey else self.storey
             
             # Determină tipul IFC
             ifc_type = determine_ifc_type_from_name(mesh_name)
@@ -375,7 +380,7 @@ class IfcGlbConverter:
             # Încearcă să atașeze elementul la storey
             try:
                 ifcopenshell.api.run("spatial.assign_container", self.model,
-                                   products=[element], relating_structure=self.storey)
+                                   products=[element], relating_structure=target_storey)
             except Exception as e:
                 print(f"[WARNING] Could not attach {mesh_name} to storey: {e}")
             
@@ -505,7 +510,101 @@ class IfcGlbConverter:
         except Exception as e:
             print(f"[ERROR] Failed to add geometry to {mesh_data.get('name', 'Unknown')}: {e}")
 
+# ===== Funcții de utilitate la nivel global =====
+
 def convert_glb_to_ifc(glb_path: str, json_mapping_path: str, output_ifc_path: str) -> bool:
+    """
+    Funcție de utilitate pentru conversia GLB + JSON mapping → IFC (un singur nivel)
+    
+    Args:
+        glb_path: Calea către fișierul GLB
+        json_mapping_path: Calea către JSON mapping
+        output_ifc_path: Calea pentru fișierul IFC rezultat
+        
+    Returns:
+        True dacă conversia a fost cu succes
+    """
+    converter = IfcGlbConverter()
+    return converter.convert_glb_to_ifc(glb_path, json_mapping_path, output_ifc_path)
+
+def convert_multiple_levels_to_ifc(level_files: List[tuple], output_ifc_path: str, project_name: str = "Multi-Level Building") -> bool:
+    """
+    Convertește multiple niveluri (fiecare cu GLB + JSON) într-un singur fișier IFC
+    
+    Args:
+        level_files: Lista de tuple-uri (glb_path, json_path, level_name, level_z)
+        output_ifc_path: Calea unde să salveze fișierul IFC
+        project_name: Numele proiectului
+        
+    Returns:
+        True dacă conversia a fost cu succes
+    """
+    try:
+        converter = IfcGlbConverter()
+        
+        print(f"[DEBUG] Converting {len(level_files)} levels to IFC")
+        
+        # Creează modelul IFC cu structura de bază
+        converter._create_ifc_model(project_name)
+        
+        total_converted = 0
+        
+        # Procesează fiecare nivel
+        for glb_path, json_path, level_name, level_z in level_files:
+            print(f"\n[DEBUG] ===== Processing Level: {level_name} at Z={level_z} =====")
+            
+            # Încarcă GLB și JSON pentru acest nivel
+            print(f"[DEBUG] Loading GLB from: {glb_path}")
+            glb_meshes = converter._load_glb_meshes(glb_path)
+            
+            print(f"[DEBUG] Loading JSON from: {json_path}")
+            json_mapping = converter._load_json_mapping(json_path)
+            
+            print(f"[DEBUG] Found {len(glb_meshes)} meshes and {len(json_mapping)} JSON entries")
+            
+            # Creează un IfcBuildingStorey pentru acest nivel
+            storey = ifcopenshell.api.run("root.create_entity", converter.model,
+                                         ifc_class="IfcBuildingStorey",
+                                         name=level_name)
+            
+            # Setează elevația nivelului
+            storey.Elevation = float(level_z)
+            
+            # Atașează storey-ul la building
+            ifcopenshell.api.run("aggregate.assign_object", converter.model,
+                               products=[storey], relating_object=converter.building)
+            
+            # Convertește fiecare mesh cu metadata
+            level_count = 0
+            for mesh_data in glb_meshes:
+                mesh_uuid = mesh_data.get('uuid')
+                if not mesh_uuid:
+                    continue
+                
+                metadata = converter._find_metadata_by_uuid(json_mapping, mesh_uuid)
+                if not metadata:
+                    continue
+                
+                # Convertește mesh-ul specific pentru acest storey
+                if converter._convert_mesh_to_ifc(mesh_data, metadata, storey):
+                    level_count += 1
+            
+            print(f"[DEBUG] Level '{level_name}': converted {level_count} elements")
+            total_converted += level_count
+        
+        print(f"\n[DEBUG] Total converted: {total_converted} elements across {len(level_files)} levels")
+        
+        # Salvează fișierul IFC
+        converter.model.write(output_ifc_path)
+        print(f"[SUCCESS] Multi-level IFC file saved: {output_ifc_path}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Multi-level IFC conversion failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
     """
     Funcție de utilitate pentru conversia GLB + JSON mapping → IFC
     
@@ -521,35 +620,98 @@ def convert_glb_to_ifc(glb_path: str, json_mapping_path: str, output_ifc_path: s
     return converter.convert_glb_to_ifc(glb_path, json_mapping_path, output_ifc_path)
 
 if __name__ == "__main__":
-    # Test cu fișierele din directorul curent
+    # Accept argumentele din linia de comandă
     import sys
     import os
+    import re
     
-    if len(sys.argv) >= 2:
+    # Mod 1: Multiple niveluri cu auto-detect
+    # Usage: python ifc_glb_converter.py --multi <folder_path> <ifc_output>
+    if len(sys.argv) >= 4 and sys.argv[1] == "--multi":
+        folder_path = sys.argv[2]
+        ifc_path = sys.argv[3]
+        
+        # Găsește toate fișierele GLB și JSON din folder
+        level_files = []
+        
+        import os
+        for filename in os.listdir(folder_path):
+            if filename.endswith('.glb'):
+                base_name = filename[:-4]  # Remove .glb
+                glb_file = os.path.join(folder_path, filename)
+                json_file = os.path.join(folder_path, base_name + '_mapping.json')
+                
+                if os.path.exists(json_file):
+                    # Extrage Z din numele fișierului (ex: 2Second.Floor_2.80.glb -> 2.80)
+                    z_match = re.search(r'_(-?\d+\.\d+)\.glb$', filename)
+                    level_z = float(z_match.group(1)) if z_match else 0.0
+                    
+                    # Numele nivelului (ex: 2Second.Floor_2.80 -> 2Second.Floor)
+                    level_name = base_name.split('_')[0] if '_' in base_name else base_name
+                    
+                    level_files.append((glb_file, json_file, level_name, level_z))
+        
+        # Sortează după Z
+        level_files.sort(key=lambda x: x[3])
+        
+        print(f"=== Multi-Level IFC Converter ===")
+        print(f"Folder: {folder_path}")
+        print(f"Found {len(level_files)} levels:")
+        for glb, json, name, z in level_files:
+            print(f"  - {name} at Z={z}")
+        print(f"Output IFC: {ifc_path}")
+        
+        if convert_multiple_levels_to_ifc(level_files, ifc_path, "Multi-Level Building"):
+            print(f"[SUCCESS] Multi-level conversion successful: {ifc_path}")
+        else:
+            print("[ERROR] Multi-level conversion failed")
+    
+    # Mod 2: Single level cu 3 argumente directe: glb_path, json_path, ifc_path
+    elif len(sys.argv) >= 4:
+        glb_path = sys.argv[1]
+        json_path = sys.argv[2]
+        ifc_path = sys.argv[3]
+        
+        print("=== IFC GLB Converter ===")
+        print(f"GLB: {glb_path}")
+        print(f"JSON: {json_path}")
+        print(f"IFC: {ifc_path}")
+        
+        if convert_glb_to_ifc(glb_path, json_path, ifc_path):
+            print(f"[SUCCESS] Conversion successful: {ifc_path}")
+        else:
+            print("[ERROR] Conversion failed")
+    
+    # Mod 3: Fallback la logica veche pentru compatibilitate (base_name)
+    elif len(sys.argv) >= 2:
         base_name = sys.argv[1]
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        
+        # Încearcă mai întâi cu _out, apoi fără
+        glb_path = os.path.join(parent_dir, f"{base_name}_out.glb")
+        json_path = os.path.join(parent_dir, f"{base_name}_out_mapping.json")
+        
+        if not os.path.exists(glb_path):
+            glb_path = os.path.join(parent_dir, f"{base_name}.glb")
+        if not os.path.exists(json_path):
+            json_path = os.path.join(parent_dir, f"{base_name}_mapping.json")
+        
+        ifc_path = os.path.join(parent_dir, f"{base_name}_from_glb.ifc")
+        
+        print("=== IFC GLB Converter Test ===")
+        print(f"GLB: {glb_path}")
+        print(f"JSON: {json_path}")
+        print(f"IFC: {ifc_path}")
+        
+        if convert_glb_to_ifc(glb_path, json_path, ifc_path):
+            print(f"[SUCCESS] Conversion successful: {ifc_path}")
+        else:
+            print("[ERROR] Conversion failed")
     else:
-        base_name = "test_grid"
-    
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    
-    # Încearcă mai întâi cu _out, apoi fără
-    glb_path = os.path.join(parent_dir, f"{base_name}_out.glb")
-    json_path = os.path.join(parent_dir, f"{base_name}_out_mapping.json")
-    
-    if not os.path.exists(glb_path):
-        glb_path = os.path.join(parent_dir, f"{base_name}.glb")
-    if not os.path.exists(json_path):
-        json_path = os.path.join(parent_dir, f"{base_name}_mapping.json")
-    
-    ifc_path = os.path.join(parent_dir, f"{base_name}_from_glb.ifc")
-    
-    print("=== IFC GLB Converter Test ===")
-    print(f"GLB: {glb_path}")
-    print(f"JSON: {json_path}")
-    print(f"IFC: {ifc_path}")
-    
-    if convert_glb_to_ifc(glb_path, json_path, ifc_path):
-        print(f"✅ Conversion successful: {ifc_path}")
-    else:
-        print("❌ Conversion failed")
+        print("Usage:")
+        print("  Multi-level: python ifc_glb_converter.py --multi <folder_path> <ifc_output>")
+        print("  Single-level: python ifc_glb_converter.py <glb_path> <json_path> <ifc_path>")
+        print("  Legacy: python ifc_glb_converter.py <base_name>")
+        sys.exit(1)

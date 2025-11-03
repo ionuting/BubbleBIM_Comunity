@@ -2673,8 +2673,9 @@ def create_section_plane_mesh(center, normal, width, height):
 # -----------------------------
 # Conversie DXF → GLB
 # -----------------------------
-def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
+def dxf_to_gltf(dxf_path, out_path, arc_segments=16, disable_ifc_conversion=False):
     print(f"[DEBUG] Start DXF to GLB: {dxf_path} -> {out_path}")
+    print(f"[DEBUG] IFC conversion disabled: {disable_ifc_conversion}")
     start_time = time.time()
 
     # Extrage Z global din numele fișierului
@@ -2684,10 +2685,10 @@ def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
     doc = ezdxf.readfile(dxf_path)
     msp = doc.modelspace()
 
-    # Inițializează converterul IFC în background
+    # Inițializează converterul IFC în background (doar dacă nu e dezactivat)
     ifc_converter = None
     ifc_output_path = None
-    if IFC_CONVERSION_AVAILABLE:
+    if IFC_CONVERSION_AVAILABLE and not disable_ifc_conversion:
         try:
             # Determină numele proiectului din calea fișierului
             project_name = os.path.splitext(os.path.basename(dxf_path))[0]
@@ -3534,8 +3535,8 @@ def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
         json.dump(mapping, jf, indent=2)
     print(f"[DEBUG] Exported mapping JSON: {json_path}")
 
-    # Start IFC background conversion
-    if ifc_converter and IFC_CONVERSION_AVAILABLE and ifc_output_path:
+    # Start IFC background conversion (only if not disabled)
+    if ifc_converter and IFC_CONVERSION_AVAILABLE and ifc_output_path and not disable_ifc_conversion:
         try:
             print(f"[DEBUG] Adding {len(mapping)} elements to IFC queue...")
             
@@ -3554,6 +3555,8 @@ def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
             
         except Exception as e:
             print(f"[WARNING] Could not start IFC background conversion: {e}")
+    elif disable_ifc_conversion:
+        print(f"[DEBUG] IFC background conversion skipped (disabled via --no-ifc flag)")
 
     export_scene(scene, out_path)
 
@@ -3561,7 +3564,7 @@ def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
     print(f"[DEBUG] Finished DXF to GLB in {elapsed:.2f} sec.")
     
     # GLB-based IFC conversion (more robust - uses final geometry + metadata)
-    if IFC_GLB_CONVERSION_AVAILABLE:
+    if IFC_GLB_CONVERSION_AVAILABLE and not disable_ifc_conversion:
         try:
             base_name = os.path.splitext(out_path)[0]
             json_mapping_path = base_name + "_mapping.json"
@@ -3577,25 +3580,43 @@ def dxf_to_gltf(dxf_path, out_path, arc_segments=16):
                 print(f"[WARNING] JSON mapping not found for GLB-based IFC conversion: {json_mapping_path}")
         except Exception as e:
             print(f"[WARNING] GLB-based IFC conversion error: {e}")
+    elif disable_ifc_conversion:
+        print(f"[DEBUG] GLB-based IFC conversion skipped (disabled via --no-ifc flag)")
     
     # Information about IFC background conversion
-    if ifc_converter and IFC_CONVERSION_AVAILABLE:
+    if ifc_converter and IFC_CONVERSION_AVAILABLE and not disable_ifc_conversion:
         print(f"[INFO] IFC conversion running in background...")
         print(f"[INFO] Final IFC file: {ifc_output_path}")
         print(f"[INFO] To wait for completion: ifc_converter.wait_for_completion()")
+    elif disable_ifc_conversion:
+        print(f"[DEBUG] IFC conversion fully disabled - only GLB + JSON metadata generated")
 
 # -----------------------------
 # Main
 # -----------------------------
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python dxf_to_glb.py input.dxf output.glb [arc_segments]")
+        print("Usage: python dxf_to_glb.py input.dxf output.glb [arc_segments] [--no-ifc]")
         sys.exit(1)
 
     dxf_path = sys.argv[1]
     out_path = sys.argv[2]
-    arc_segments = int(sys.argv[3]) if len(sys.argv) > 3 else 16
+    
+    # Parse remaining arguments
+    arc_segments = 16
+    disable_ifc = False
+    
+    # Check for numeric arc_segments and --no-ifc flag
+    for i in range(3, len(sys.argv)):
+        arg = sys.argv[i]
+        if arg == "--no-ifc":
+            disable_ifc = True
+            print("[DEBUG] IFC conversion disabled via --no-ifc flag")
+        elif arg.isdigit():
+            arc_segments = int(arg)
+        else:
+            print(f"[WARNING] Unknown argument: {arg}")
 
-    dxf_to_gltf(dxf_path, out_path, arc_segments)
+    dxf_to_gltf(dxf_path, out_path, arc_segments, disable_ifc_conversion=disable_ifc)
 
     print(f"Converted {dxf_path} to {out_path}")
