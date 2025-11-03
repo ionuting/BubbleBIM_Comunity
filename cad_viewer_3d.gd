@@ -40,10 +40,7 @@ var orbit_pivot: Vector3 = Vector3.ZERO
 var coord_label: Label
 
 # Grid UI controls
-var grid_controls_panel: Panel
 var grid_visible_checkbox: CheckBox
-var grid_z_slider: HSlider
-var grid_z_label: Label
 
 var selected_geometry: Node3D = null
 var default_material: StandardMaterial3D = null
@@ -163,15 +160,22 @@ func _ready():
 	print("=== CAD VIEWER 3D - SCENE STARTUP COMPLETE ===")
 	print("[DEBUG] Final grid state - infinite_grid node:", infinite_grid != null, "visible:", infinite_grid.visible if infinite_grid else "N/A")
 	
-	# Integrare Export IFC Button
-	var export_ifc_btn = $CanvasLayer/ExportIfcBtn if has_node("CanvasLayer/ExportIfcBtn") else null
-	if export_ifc_btn:
-		export_ifc_btn.pressed.connect(_on_export_ifc_btn_pressed)
-	
-	# Integrare Export Multi-Level IFC Button
-	var export_multi_ifc_btn = $CanvasLayer/ExportMultiIfcBtn if has_node("CanvasLayer/ExportMultiIfcBtn") else null
+	# Integrare Export Multi-Level IFC Buttons
+	var export_multi_ifc_btn = $CanvasLayer/ExportIfcBtnMetric if has_node("CanvasLayer/ExportIfcBtnMetric") else null
+	print("[DEBUG] ExportIfcBtnMetric found: ", export_multi_ifc_btn != null)
 	if export_multi_ifc_btn:
-		export_multi_ifc_btn.pressed.connect(_on_export_multi_ifc_btn_pressed)
+		export_multi_ifc_btn.pressed.connect(_on_export_ifc_metric_btn_pressed)
+		print("[DEBUG] Connected metric IFC export button")
+	else:
+		print("[ERROR] ExportIfcBtnMetric not found!")
+	
+	var export_multi_ifc_btn2 = $CanvasLayer/ExportIfcBtnImperial if has_node("CanvasLayer/ExportIfcBtnImperial") else null
+	print("[DEBUG] ExportIfcBtnImperial found: ", export_multi_ifc_btn2 != null)
+	if export_multi_ifc_btn2:
+		export_multi_ifc_btn2.pressed.connect(_on_export_ifc_imperial_btn_pressed)
+		print("[DEBUG] Connected imperial IFC export button")
+	else:
+		print("[ERROR] ExportIfcBtnImperial not found!")
 
 	print("[DEBUG] 🔥🔥🔥 READY TO MOVE TO UI INTEGRATION SECTION 🔥🔥🔥")
 	print("[DEBUG] *** STEP 9: Moving to UI integration section ***")
@@ -503,7 +507,9 @@ func _process_dxf_folder(dir_path: String):
 
 func _run_python_dxf_to_glb(dxf_path: String, glb_path: String):
 	var script_path = "python/dxf_to_glb_trimesh.py"
-	var args = [script_path, dxf_path, glb_path]
+	# Add --no-ifc flag to disable automatic IFC conversion during project loading
+	# This keeps GLB + JSON metadata generation but skips IFC conversion for better performance
+	var args = [script_path, dxf_path, glb_path, "--no-ifc"]
 	var output = []
 	print("[DEBUG] Running Python: python ", args)
 	var exit_code = OS.execute("python", args, output, true)
@@ -1614,67 +1620,32 @@ func _on_3dtiles_file_selected(path: String):
 func _setup_coordinate_label():
 	coord_label = Label.new()
 	coord_label.text = "X: 0.0, Y: 0.0, Z: 0.0"
-	coord_label.position = Vector2(220, get_viewport().get_visible_rect().size.y - 50)  # Lângă panelul de grid
+	coord_label.position = Vector2(10, get_viewport().get_visible_rect().size.y - 90)  # Sub checkbox-ul de grid
 	coord_label.size = Vector2(300, 30)
-	coord_label.add_theme_color_override("font_color", Color.BLACK)
+	coord_label.add_theme_color_override("font_color", Color.WHITE)
 	coord_label.add_theme_font_size_override("font_size", 14)
 	canvas.add_child(coord_label)
-	print("[UI_DEBUG] Coordinate label positioned next to grid controls panel")
+	print("[UI_DEBUG] Coordinate label positioned below grid checkbox")
 
 func _setup_grid_controls():
-	"""Creează controalele UI pentru grid infinit"""
+	"""Creează controlul UI pentru vizibilitatea grid-ului"""
 	print("[UI_DEBUG] Setting up grid controls...")
 	print("[UI_DEBUG] Canvas available:", canvas != null)
 	print("[UI_DEBUG] Canvas name:", canvas.get_name() if canvas else "N/A")
 	
-	# Creează panelul de grid controls în partea de jos a ecranului pentru a nu se suprapune
-	grid_controls_panel = Panel.new()
-	grid_controls_panel.position = Vector2(10, get_viewport().get_visible_rect().size.y - 120)  # Jos în stânga
-	grid_controls_panel.size = Vector2(200, 80)
-	grid_controls_panel.add_theme_color_override("bg_color", Color(0.9, 0.9, 0.9, 0.8))
-	canvas.add_child(grid_controls_panel)
-	print("[UI_DEBUG] Grid controls panel created and added to canvas at bottom-left")
-	
-	# Title
-	var title_label = Label.new()
-	title_label.text = "Grid Controls"
-	title_label.position = Vector2(10, 5)
-	title_label.add_theme_color_override("font_color", Color.BLACK)
-	title_label.add_theme_font_size_override("font_size", 12)
-	grid_controls_panel.add_child(title_label)
-	
-	# Grid Visibility Checkbox
+	# Grid Visibility Checkbox (doar checkbox-ul, fără panel)
 	grid_visible_checkbox = CheckBox.new()
 	grid_visible_checkbox.text = "Show Grid"
-	grid_visible_checkbox.position = Vector2(10, 25)
+	grid_visible_checkbox.position = Vector2(10, get_viewport().get_visible_rect().size.y - 60)  # Jos în stânga
 	grid_visible_checkbox.button_pressed = grid_visible
 	grid_visible_checkbox.toggled.connect(_on_grid_visibility_toggled)
-	grid_controls_panel.add_child(grid_visible_checkbox)
+	grid_visible_checkbox.add_theme_color_override("font_color", Color.WHITE)
+	grid_visible_checkbox.add_theme_font_size_override("font_size", 12)
+	canvas.add_child(grid_visible_checkbox)
 	
-	# Grid Z Position Label
-	grid_z_label = Label.new()
-	grid_z_label.text = "Grid Z: 0.00"
-	grid_z_label.position = Vector2(10, 50)
-	grid_z_label.add_theme_color_override("font_color", Color.BLACK)
-	grid_z_label.add_theme_font_size_override("font_size", 10)
-	grid_controls_panel.add_child(grid_z_label)
-	
-	# Grid Z Position Slider
-	grid_z_slider = HSlider.new()
-	grid_z_slider.position = Vector2(70, 50)
-	grid_z_slider.size = Vector2(120, 20)
-	grid_z_slider.min_value = -100.0
-	grid_z_slider.max_value = 100.0
-	grid_z_slider.step = 0.01
-	grid_z_slider.value = grid_z_position
-	grid_z_slider.value_changed.connect(_on_grid_z_changed)
-	grid_controls_panel.add_child(grid_z_slider)
-	
-	print("[UI_DEBUG] Grid controls setup complete!")
-	print("[UI_DEBUG] - Panel position:", grid_controls_panel.position, "size:", grid_controls_panel.size)
+	print("[UI_DEBUG] Grid visibility checkbox created and added to canvas")
+	print("[UI_DEBUG] - Checkbox position:", grid_visible_checkbox.position)
 	print("[UI_DEBUG] - Checkbox state:", grid_visible_checkbox.button_pressed)
-	print("[UI_DEBUG] - Slider range:", grid_z_slider.min_value, "to", grid_z_slider.max_value, "current:", grid_z_slider.value)
-	print("[UI_DEBUG] - Panel children count:", grid_controls_panel.get_child_count())
 
 # === GRID CALLBACKS ===
 
@@ -1688,117 +1659,6 @@ func _on_grid_visibility_toggled(button_pressed: bool):
 	else:
 		print("[CALLBACK_DEBUG] ERROR: infinite_grid is null!")
 	print("[CADViewer] Grid visibility: ", grid_visible)
-
-func _on_grid_z_changed(value: float):
-	"""Update grid Z position"""
-	print("[CALLBACK_DEBUG] Grid Z position changed called - new value:", value)
-	grid_z_position = value
-	# Recreate grid with new Z position
-	if infinite_grid:
-		print("[CALLBACK_DEBUG] Freeing old grid instance...")
-		infinite_grid.queue_free()
-	print("[CALLBACK_DEBUG] Recreating grid at new Z position...")
-	_create_infinite_grid()
-	# Update label
-	if grid_z_label:
-		grid_z_label.text = "Grid Z: %.2f" % grid_z_position
-		print("[CALLBACK_DEBUG] Label updated to:", grid_z_label.text)
-	print("[CADViewer] Grid Z position: ", grid_z_position)
-	
-	# Horizontal Section Z Position
-	var h_z_label = Label.new()
-	h_z_label.text = "H-Section Z:"
-	h_z_label.position = Vector2(10, 55)
-	h_z_label.add_theme_color_override("font_color", Color.BLACK)
-	section_controls_panel.add_child(h_z_label)
-	
-	h_section_slider = HSlider.new()
-	h_section_slider.position = Vector2(90, 55)
-	h_section_slider.size = Vector2(120, 20)
-	h_section_slider.min_value = -10.0
-	h_section_slider.max_value = 10.0
-	h_section_slider.step = 0.1
-	h_section_slider.value = horizontal_section_z
-	h_section_slider.value_changed.connect(_on_horizontal_section_z_changed)
-	section_controls_panel.add_child(h_section_slider)
-	
-	# Horizontal Section Depth
-	var h_depth_label = Label.new()
-	h_depth_label.text = "H-Depth:"
-	h_depth_label.position = Vector2(10, 80)
-	h_depth_label.add_theme_color_override("font_color", Color.BLACK)
-	section_controls_panel.add_child(h_depth_label)
-	
-	h_depth_slider = HSlider.new()
-	h_depth_slider.position = Vector2(90, 80)
-	h_depth_slider.size = Vector2(120, 20)
-	h_depth_slider.min_value = 0.5
-	h_depth_slider.max_value = 10.0
-	h_depth_slider.step = 0.1
-	h_depth_slider.value = horizontal_section_depth
-	h_depth_slider.value_changed.connect(_on_horizontal_depth_changed)
-	section_controls_panel.add_child(h_depth_slider)
-	
-	# Vertical Section Toggle
-	vertical_section_toggle = CheckBox.new()
-	vertical_section_toggle.text = "Vertical Section"
-	vertical_section_toggle.position = Vector2(10, 110)
-	vertical_section_toggle.button_pressed = vertical_section_enabled
-	vertical_section_toggle.toggled.connect(_on_vertical_section_toggled)
-	section_controls_panel.add_child(vertical_section_toggle)
-	
-	# Vertical Section X Position
-	var v_x_label = Label.new()
-	v_x_label.text = "V-Section X:"
-	v_x_label.position = Vector2(10, 135)
-	v_x_label.add_theme_color_override("font_color", Color.BLACK)
-	section_controls_panel.add_child(v_x_label)
-	
-	v_section_x_slider = HSlider.new()
-	v_section_x_slider.position = Vector2(90, 135)
-	v_section_x_slider.size = Vector2(120, 20)
-	v_section_x_slider.min_value = -20.0
-	v_section_x_slider.max_value = 20.0
-	v_section_x_slider.step = 0.1
-	v_section_x_slider.value = vertical_section_x
-	v_section_x_slider.value_changed.connect(_on_vertical_section_x_changed)
-	section_controls_panel.add_child(v_section_x_slider)
-	
-	# Vertical Section Y Position
-	var v_y_label = Label.new()
-	v_y_label.text = "V-Section Y:"
-	v_y_label.position = Vector2(10, 160)
-	v_y_label.add_theme_color_override("font_color", Color.BLACK)
-	section_controls_panel.add_child(v_y_label)
-	
-	v_section_y_slider = HSlider.new()
-	v_section_y_slider.position = Vector2(90, 160)
-	v_section_y_slider.size = Vector2(120, 20)
-	v_section_y_slider.min_value = -20.0
-	v_section_y_slider.max_value = 20.0
-	v_section_y_slider.step = 0.1
-	v_section_y_slider.value = vertical_section_y
-	v_section_y_slider.value_changed.connect(_on_vertical_section_y_changed)
-	section_controls_panel.add_child(v_section_y_slider)
-	
-	# Vertical Section Depth
-	var v_depth_label = Label.new()
-	v_depth_label.text = "V-Depth:"
-	v_depth_label.position = Vector2(10, 185)
-	v_depth_label.add_theme_color_override("font_color", Color.BLACK)
-	section_controls_panel.add_child(v_depth_label)
-	
-	v_depth_slider = HSlider.new()
-	v_depth_slider.position = Vector2(90, 185)
-	v_depth_slider.size = Vector2(120, 20)
-	v_depth_slider.min_value = 1.0
-	v_depth_slider.max_value = 20.0
-	v_depth_slider.step = 0.1
-	v_depth_slider.value = vertical_section_depth
-	v_depth_slider.value_changed.connect(_on_vertical_depth_changed)
-	section_controls_panel.add_child(v_depth_slider)
-	
-	print("[CADViewer] Section controls setup complete")
 
 func _create_section_planes():
 	"""Creează planurile vizuale pentru sectiuni"""
@@ -2666,299 +2526,120 @@ func _flash_reload_indicator():
 	tween.tween_property(flash_label, "modulate:a", 0.0, 2.0)
 	tween.tween_callback(flash_label.queue_free.bind())
 
-# === IFC Space Export ===
-func _on_export_ifc_btn_pressed():
-	"""Exportă IfcSpace-urile din scena curentă în format IFC"""
-	print("[DEBUG] Starting IFC Space export...")
+# === MULTI-LEVEL IFC EXPORT ===
+func _on_export_ifc_metric_btn_pressed():
+	"""Exportă toate fișierele DXF încărcate ca multi-level building în IFC metric"""
+	print("[DEBUG] *** METRIC IFC EXPORT BUTTON PRESSED ***")
+	print("[DEBUG] Function called successfully!")
+	_export_ifc_building("metric")
+
+func _on_export_ifc_imperial_btn_pressed():
+	"""Exportă toate fișierele DXF încărcate ca multi-level building în IFC imperial"""
+	print("[DEBUG] *** IMPERIAL IFC EXPORT BUTTON PRESSED ***")
+	print("[DEBUG] Function called successfully!")
+	_export_ifc_building("imperial")
+
+func _export_ifc_building(unit_system: String):
+	"""Exportă clădirea completă în IFC 4 cu unități specificate"""
+	print("[DEBUG] *** _export_ifc_building CALLED ***")
+	print("[DEBUG] Unit system: ", unit_system)
+	print("[DEBUG] Current project folder: ", current_project_folder)
+	print("[DEBUG] Imported projects count: ", imported_projects.size())
 	
-	# Verifică dacă avem IfcSpace-uri în scenă
-	var space_nodes = _find_ifcspace_nodes()
-	if space_nodes.is_empty():
-		print("[WARNING] No IfcSpace elements found in scene")
-		_show_export_message("No IfcSpace elements found to export", false)
+	# Verifică dacă avem proiecte importate
+	if imported_projects.is_empty():
+		print("[WARNING] No DXF projects loaded")
+		_show_export_message("No DXF projects loaded. Import some DXF files first.", false)
 		return
 	
-	# Creează folder pentru export dacă nu există
-	var export_dir = "exported_ifc"
-	if not DirAccess.dir_exists_absolute(export_dir):
-		DirAccess.open(".").make_dir(export_dir)
+	# Deschide dialog pentru salvare
+	print("[DEBUG] Creating file dialog...")
+	var file_dialog = FileDialog.new()
+	file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	file_dialog.add_filter("*.ifc", "IFC Files")
 	
-	# Generează nume fișier cu timestamp
+	# Nume implicit cu timestamp și sistem de unități
 	var timestamp = Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
-	var base_name = "spaces_export_" + timestamp
-	var godot_data_path = export_dir + "/" + base_name + "_geometry.json"
-	var ifc_output_path = export_dir + "/" + base_name + ".ifc"
+	var default_name = "building_%s_%s.ifc" % [unit_system, timestamp]
+	file_dialog.current_file = default_name
+	print("[DEBUG] Default filename: ", default_name)
 	
-	# Exportă geometria din Godot
-	var geometry_data = _extract_space_geometry_data(space_nodes)
-	if not _save_json_file(godot_data_path, geometry_data):
-		_show_export_message("Failed to save geometry data", false)
+	# Conectează semnalul pentru când utilizatorul selectează calea
+	file_dialog.file_selected.connect(_on_ifc_export_path_selected.bind(unit_system))
+	print("[DEBUG] Connected file dialog signal")
+	
+	# Verifică canvas
+	print("[DEBUG] Canvas available: ", canvas != null)
+	if not canvas:
+		print("[ERROR] Canvas is null! Cannot add file dialog")
+		_show_export_message("Error: Canvas not available for file dialog", false)
 		return
 	
-	# Găsește cel mai recent fișier de mapping
-	var mapping_path = _find_latest_mapping_file()
-	if mapping_path == "":
-		print("[ERROR] No mapping file found. Import a DXF/GLB project first.")
-		_show_export_message("No mapping file found. Import a DXF/GLB project first.", false)
+	# Adaugă dialog la scenă și afișează
+	canvas.add_child(file_dialog)
+	file_dialog.popup_centered(Vector2i(800, 600))
+	print("[DEBUG] File dialog should be visible now")
+
+func _on_ifc_export_path_selected(file_path: String, unit_system: String):
+	"""Callback pentru când utilizatorul alege calea de export IFC"""
+	print("[DEBUG] User selected IFC export path: %s (units: %s)" % [file_path, unit_system])
+	
+	# Colectează toate fișierele DXF din folder
+	var dxf_files = _collect_dxf_files_from_folder()
+	
+	if dxf_files.is_empty():
+		print("[WARNING] No DXF files found in current folder")
+		_show_export_message("No DXF files found in current project folder.", false)
 		return
 	
-	# Rulează exportul Python IFC
-	var success = _run_python_ifc_export(godot_data_path, mapping_path, ifc_output_path)
+	# Rulează exportul IFC direct cu IfcOpenShell
+	var success = _run_direct_ifc_export(dxf_files, file_path, unit_system)
 	
 	if success:
-		print("[SUCCESS] IFC export completed: ", ifc_output_path)
-		_show_export_message("IFC export completed successfully!\nFile: " + ifc_output_path, true)
+		print("[SUCCESS] IFC export completed: ", file_path)
+		_show_export_message("IFC export completed successfully!\nFile: " + file_path + "\nLevels: " + str(dxf_files.size()) + "\nUnits: " + unit_system, true)
 	else:
 		print("[ERROR] IFC export failed")
 		_show_export_message("IFC export failed. Check console for details.", false)
 
-func _find_ifcspace_nodes() -> Array:
-	"""Găsește toate nodurile IfcSpace din scenă"""
-	var space_nodes = []
-	_find_ifcspace_recursive(self, space_nodes)
-	print("[DEBUG] Found %d IfcSpace nodes" % space_nodes.size())
-	return space_nodes
+func _collect_dxf_files_from_folder() -> Array:
+	"""Colectează toate fișierele DXF din folderul curent de proiect"""
+	var dxf_files = []
+	
+	if current_project_folder == "":
+		print("[WARNING] No project folder selected")
+		return dxf_files
+	
+	var dir = DirAccess.open(current_project_folder)
+	if not dir:
+		print("[ERROR] Cannot access project folder: ", current_project_folder)
+		return dxf_files
+	
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name.to_lower().ends_with(".dxf"):
+			var full_path = current_project_folder + "/" + file_name
+			dxf_files.append(full_path)
+			print("[DEBUG] Found DXF file: ", full_path)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	
+	print("[DEBUG] Collected %d DXF files from folder" % dxf_files.size())
+	return dxf_files
 
-func _find_ifcspace_recursive(node: Node, space_nodes: Array):
-	"""Caută recursiv nodurile IfcSpace"""
-	var is_ifcspace = false
+func _run_direct_ifc_export(dxf_files: Array, ifc_output_path: String, unit_system: String) -> bool:
+	"""Rulează exportul IFC din GLB + JSON folosind ifc_glb_converter.py în modul multi-level"""
+	var script_path = "python/ifc_glb_converter.py"
 	
-	# Verifică dacă nodul curent este un MeshInstance3D
-	if node is MeshInstance3D:
-		# Prioritate 1: Verifică metadata layer
-		if node.has_meta("layer"):
-			var layer = node.get_meta("layer")
-			if layer == "IfcSpace":
-				is_ifcspace = true
-				print("[DEBUG] Found IfcSpace by metadata: ", node.name)
-		
-		# Prioritate 2: Verifică numele nodului doar dacă nu a fost găsit prin metadata
-		elif "IfcSpace" in str(node.name):
-			is_ifcspace = true
-			print("[DEBUG] Found IfcSpace by name: ", node.name)
-		
-		# Adaugă nodul doar o singură dată
-		if is_ifcspace:
-			# Verifică dacă nodul nu există deja în array (pentru siguranță extra)
-			if node not in space_nodes:
-				space_nodes.append(node)
-			else:
-				print("[WARNING] Prevented duplicate IfcSpace node: ", node.name)
+	# Folosește modul --multi pentru a converti toate nivelurile dintr-un folder
+	# Argumentele: --multi <folder_path> <ifc_output>
+	var args = [script_path, "--multi", current_project_folder, ifc_output_path]
 	
-	# Recursiv în copii
-	for child in node.get_children():
-		_find_ifcspace_recursive(child, space_nodes)
-
-func _extract_space_geometry_data(space_nodes: Array) -> Dictionary:
-	"""Extrage datele geometrice din nodurile IfcSpace și le îmbogățește cu datele din JSON de mapare"""
-	var spaces_data = []
-	
-	# Încarcă datele din fișierul de mapare JSON pentru a obține valorile corecte
-	var mapping_data = _load_mapping_data_for_spaces()
-	
-	for node in space_nodes:
-		if not node is MeshInstance3D or not node.mesh:
-			continue
-			
-		var space_data = {}
-		space_data["mesh_name"] = str(node.name)
-		space_data["uuid"] = node.get_meta("uuid") if node.has_meta("uuid") else ""
-		
-		# Extrage vertices din mesh pentru geometria 3D
-		var vertices = []
-		var mesh = node.mesh
-		
-		if mesh is ArrayMesh and mesh.get_surface_count() > 0:
-			var arrays = mesh.surface_get_arrays(0)
-			if arrays[Mesh.ARRAY_VERTEX]:
-				var vertex_array = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
-				for vertex in vertex_array:
-					# Transformă vertex-ul în spațiul world
-					var world_vertex = node.to_global(vertex)
-					vertices.append([world_vertex.x, world_vertex.y, world_vertex.z])
-		
-		# Limitează numărul de vertices pentru a evita duplicatele (în general conturul de bază)
-		if vertices.size() > 100:
-			# Încearcă să extragi doar conturul exterior (primul segment)
-			var step = max(1, vertices.size() / 20)  # Max 20 puncte pentru contur
-			var simplified_vertices = []
-			for i in range(0, vertices.size(), step):
-				simplified_vertices.append(vertices[i])
-			vertices = simplified_vertices
-		
-		space_data["vertices"] = vertices
-		space_data["vertex_count"] = vertices.size()
-		
-		# IMPORTANT: Înlocuiește valorile din metadata cu cele corecte din JSON de mapare
-		var mapping_entry = _find_mapping_entry_for_space(space_data["uuid"], space_data["mesh_name"], mapping_data)
-		if mapping_entry:
-			# Folosește valorile calculate corect din JSON (inclusiv Opening_area)
-			space_data["height"] = _calculate_space_height_from_xdata(mapping_entry)
-			space_data["area"] = float(mapping_entry.get("area", 0.0))
-			space_data["volume"] = float(mapping_entry.get("volume", 0.0))
-			space_data["perimeter"] = float(mapping_entry.get("perimeter", 0.0))
-			space_data["lateral_area"] = float(mapping_entry.get("lateral_area", 0.0))
-			
-			print("[DEBUG] Enhanced space data from JSON mapping: %s" % space_data["mesh_name"])
-			print("  - Area: %.3fm², Perimeter: %.3fm, Lateral Area: %.3fm²" % [space_data["area"], space_data["perimeter"], space_data["lateral_area"]])
-			print("  - Volume: %.3fm³, Height: %.3fm, UUID: %s" % [space_data["volume"], space_data["height"], space_data["uuid"]])
-		else:
-			# Fallback: folosește metadata din Godot dacă nu găsim în JSON
-			space_data["height"] = node.get_meta("height") if node.has_meta("height") else 2.8
-			space_data["area"] = node.get_meta("area") if node.has_meta("area") else 0.0
-			space_data["volume"] = node.get_meta("volume") if node.has_meta("volume") else 0.0
-			space_data["perimeter"] = 0.0  # Nu există în metadata Godot
-			space_data["lateral_area"] = 0.0  # Nu există în metadata Godot
-			
-			print("[WARNING] Could not find mapping data for space: %s, using fallback values" % space_data["mesh_name"])
-		
-		spaces_data.append(space_data)
-		print("[DEBUG] Extracted enhanced geometry for space: %s (%d vertices)" % [space_data["mesh_name"], vertices.size()])
-	
-	return {"spaces": spaces_data, "export_timestamp": Time.get_unix_time_from_system()}
-
-func _load_mapping_data_for_spaces() -> Array:
-	"""Încarcă datele din fișierul JSON de mapare pentru spații IfcSpace"""
-	var mapping_file = _find_latest_mapping_file()
-	if mapping_file.is_empty():
-		print("[WARNING] No mapping file found for IFC Space export")
-		return []
-	
-	print("[DEBUG] Loading mapping data from: %s" % mapping_file)
-	
-	var file = FileAccess.open(mapping_file, FileAccess.READ)
-	if not file:
-		print("[ERROR] Could not open mapping file: %s" % mapping_file)
-		return []
-	
-	var json_string = file.get_as_text()
-	file.close()
-	
-	var json = JSON.new()
-	var parse_result = json.parse(json_string)
-	if parse_result != OK:
-		print("[ERROR] Failed to parse JSON mapping file: %s" % json.get_error_message())
-		return []
-	
-	var mapping_data = json.data
-	if not mapping_data is Array:
-		print("[ERROR] Mapping file does not contain an array")
-		return []
-	
-	# Filtrează doar entitățile IfcSpace
-	var space_entries = []
-	for entry in mapping_data:
-		if entry is Dictionary and entry.get("layer", "") == "IfcSpace":
-			space_entries.append(entry)
-	
-	print("[DEBUG] Found %d IfcSpace entries in mapping file" % space_entries.size())
-	return space_entries
-
-func _find_mapping_entry_for_space(uuid: String, mesh_name: String, mapping_data: Array) -> Dictionary:
-	"""Găsește intrarea din mapping care corespunde cu spațiul dat"""
-	
-	# Prioritate 1: Caută după UUID exact
-	for entry in mapping_data:
-		if entry.get("uuid", "") == uuid and not uuid.is_empty():
-			print("[DEBUG] Found mapping entry by UUID: %s" % uuid)
-			return entry
-	
-	# Prioritate 2: Caută după mesh_name exact
-	for entry in mapping_data:
-		if entry.get("mesh_name", "") == mesh_name and not mesh_name.is_empty():
-			print("[DEBUG] Found mapping entry by mesh_name: %s" % mesh_name)
-			return entry
-	
-	# Prioritate 3: Caută după partea de bază a numelui (fără sufixe)
-	var base_name = mesh_name.split("_")[0] if "_" in mesh_name else mesh_name
-	for entry in mapping_data:
-		var entry_base_name = entry.get("mesh_name", "").split("_")[0] if "_" in entry.get("mesh_name", "") else entry.get("mesh_name", "")
-		if entry_base_name == base_name and not base_name.is_empty():
-			print("[DEBUG] Found mapping entry by base name: %s -> %s" % [base_name, entry.get("mesh_name", "")])
-			return entry
-	
-	print("[WARNING] No mapping entry found for space: UUID=%s, mesh_name=%s" % [uuid, mesh_name])
-	return {}
-
-func _calculate_space_height_from_xdata(mapping_entry: Dictionary) -> float:
-	"""Calculează înălțimea spațiului din datele XDATA din mapping"""
-	
-	# Caută în XDATA pentru înălțime
-	var xdata = mapping_entry.get("xdata", {})
-	if xdata is Dictionary:
-		# Caută câmpuri comune pentru înălțime
-		for height_field in ["Height", "height", "Space_Height", "floor_height"]:
-			if xdata.has(height_field):
-				var height_value = xdata[height_field]
-				if height_value is String:
-					# Dacă este string, încearcă să-l convertești la float
-					return float(height_value) if height_value.is_valid_float() else 2.8
-				elif height_value is float or height_value is int:
-					return float(height_value)
-		
-		print("[DEBUG] XDATA found but no height field: %s" % str(xdata.keys()))
-	
-	# Fallback: calculează înălțimea din volum și arie dacă sunt disponibile
-	var volume = float(mapping_entry.get("volume", 0.0))
-	var area = float(mapping_entry.get("area", 0.0))
-	
-	if volume > 0.0 and area > 0.0:
-		var calculated_height = volume / area
-		print("[DEBUG] Calculated height from volume/area: %.3fm (V=%.3f, A=%.3f)" % [calculated_height, volume, area])
-		return calculated_height
-	
-	# Fallback final: înălțime standard
-	print("[DEBUG] Using default height: 2.8m")
-	return 2.8
-
-func _find_latest_mapping_file() -> String:
-	"""Găsește cel mai recent fișier de mapping din folderul curent"""
-	var mapping_files = []
-	var dir = DirAccess.open(".")
-	
-	if dir:
-		dir.list_dir_begin()
-		var file_name = dir.get_next()
-		while file_name != "":
-			if file_name.ends_with("_mapping.json"):
-				var full_path = dir.get_current_dir() + "/" + file_name
-				var file_time = FileAccess.get_modified_time(full_path)
-				mapping_files.append({"path": full_path, "time": file_time})
-			file_name = dir.get_next()
-		dir.list_dir_end()
-	
-	if mapping_files.is_empty():
-		return ""
-	
-	# Sortează după timp și returnează cel mai recent
-	mapping_files.sort_custom(func(a, b): return a.time > b.time)
-	var latest = mapping_files[0]["path"]
-	print("[DEBUG] Using mapping file: ", latest)
-	return latest
-
-func _save_json_file(file_path: String, data: Dictionary) -> bool:
-	"""Salvează datele în format JSON"""
-	var file = FileAccess.open(file_path, FileAccess.WRITE)
-	if not file:
-		print("[ERROR] Cannot create file: ", file_path)
-		return false
-	
-	var json_string = JSON.stringify(data, "\t")
-	file.store_string(json_string)
-	file.close()
-	
-	print("[DEBUG] Saved geometry data: ", file_path)
-	return true
-
-func _run_python_ifc_export(godot_data_path: String, mapping_path: String, ifc_output_path: String) -> bool:
-	"""Rulează script-ul Python pentru exportul IFC"""
-	var script_path = "python/ifc_space_exporter.py"
-	var project_name = "Godot CAD Viewer Spaces"
-	
-	var args = [script_path, godot_data_path, mapping_path, ifc_output_path, project_name]
 	var output = []
 	
-	print("[DEBUG] Running Python IFC export: python ", args)
+	print("[DEBUG] Running multi-level IFC export from GLB+JSON: python ", args)
 	var exit_code = OS.execute("python", args, output, true)
 	
 	print("[PYTHON IFC OUTPUT] ", output)
@@ -2994,71 +2675,11 @@ func _show_export_message(message: String, success: bool):
 	
 	# Animație fade out după 5 secunde
 	var tween = create_tween()
-	tween.tween_interval(5.0)  # Schimbat din tween_delay în tween_interval
+	tween.tween_interval(5.0)
 	tween.tween_property(panel, "modulate:a", 0.0, 1.0)
 	tween.parallel().tween_property(message_label, "modulate:a", 0.0, 1.0)
 	tween.tween_callback(panel.queue_free.bind())
 	tween.tween_callback(message_label.queue_free.bind())
-
-# === MULTI-LEVEL IFC EXPORT ===
-func _on_export_multi_ifc_btn_pressed():
-	"""Exportă toate fișierele DXF încărcate ca multi-level building în IFC"""
-	print("[DEBUG] Starting Multi-Level IFC export...")
-	
-	# Verifică dacă avem proiecte importate
-	if imported_projects.is_empty():
-		print("[WARNING] No DXF projects loaded")
-		_show_export_message("No DXF projects loaded. Import some DXF files first.", false)
-		return
-	
-	# Creează folder pentru export dacă nu există
-	var export_dir = "exported_ifc"
-	if not DirAccess.dir_exists_absolute(export_dir):
-		DirAccess.open(".").make_dir(export_dir)
-	
-	# Generează nume fișier cu timestamp
-	var timestamp = Time.get_datetime_string_from_system().replace(":", "-").replace(" ", "_")
-	var building_name = "multi_level_building_" + timestamp
-	var ifc_output_path = export_dir + "/" + building_name + ".ifc"
-	
-	# Colectează toate fișierele DXF importate
-	var dxf_files = []
-	for project_name in imported_projects.keys():
-		if project_name.ends_with(".dxf"):
-			dxf_files.append(project_name)
-	
-	if dxf_files.is_empty():
-		print("[WARNING] No DXF files found in imported projects")
-		_show_export_message("No DXF files found. Only DXF files can be exported to multi-level IFC.", false)
-		return
-	
-	# Rulează exportul Python Multi-Level IFC
-	var success = _run_python_multi_ifc_export(dxf_files, ifc_output_path)
-	
-	if success:
-		print("[SUCCESS] Multi-Level IFC export completed: ", ifc_output_path)
-		_show_export_message("Multi-Level IFC export completed successfully!\nFile: " + ifc_output_path + "\nLevels: " + str(dxf_files.size()), true)
-	else:
-		print("[ERROR] Multi-Level IFC export failed")
-		_show_export_message("Multi-Level IFC export failed. Check console for details.", false)
-
-func _run_python_multi_ifc_export(dxf_files: Array, ifc_output_path: String) -> bool:
-	"""Rulează script-ul Python pentru exportul Multi-Level IFC"""
-	var script_path = "python/ifc_integration.py"
-	
-	var args = [script_path, ifc_output_path]
-	for dxf_file in dxf_files:
-		args.append(dxf_file)
-	
-	var output = []
-	
-	print("[DEBUG] Running Python Multi-Level IFC export: python ", args)
-	var exit_code = OS.execute("python", args, output, true)
-	
-	print("[PYTHON MULTI IFC OUTPUT] ", output)
-	print("[PYTHON MULTI IFC EXIT CODE] ", exit_code)
-	
-	return exit_code == 0
 
 # === CUT SHADER INTEGRATION METHODS ===
 

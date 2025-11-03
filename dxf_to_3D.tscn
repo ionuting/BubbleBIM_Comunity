@@ -26,19 +26,19 @@ offset_right = 280.0
 offset_bottom = 33.0
 text = "Reload"
 
-[node name="ExportIfcBtn" type="Button" parent="CanvasLayer"]
-offset_left = 295.0
-offset_top = 2.0
-offset_right = 420.0
-offset_bottom = 33.0
-text = "Export IFC Spaces"
-
-[node name="ExportMultiIfcBtn" type="Button" parent="CanvasLayer"]
+[node name="ExportIfcBtnMetric" type="Button" parent="CanvasLayer"]
 offset_left = 425.0
 offset_top = 2.0
 offset_right = 580.0
 offset_bottom = 33.0
-text = "Export Multi-Level IFC"
+text = "Export IFC metric"
+
+[node name="ExportIfcBtnImperial" type="Button" parent="CanvasLayer"]
+offset_left = 628.0
+offset_top = 3.0
+offset_right = 783.0
+offset_bottom = 34.0
+text = "Export IFC imperial"
 
 [node name="Panel" type="Panel" parent="CanvasLayer"]
 anchors_preset = -1
@@ -52,6 +52,7 @@ offset_bottom = -34.52
 
 [node name="DxfFolderDialog" type="FileDialog" parent="CanvasLayer"]
 title = "Open a Directory"
+position = Vector2i(0, 36)
 visible = true
 ok_button_text = "Select Current Folder"
 file_mode = 2
